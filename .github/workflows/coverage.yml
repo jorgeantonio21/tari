@@ -1,25 +1,16 @@
 name: Source Coverage
 on:
+  workflow_dispatch:
   push:
     branches:
       - development
-
-env:
-  toolchain: nightly-2021-11-20
+      - ci-*
 
 jobs:
   coverage:
     name: test
-    runs-on: ubuntu-18.04
+    runs-on: [self-hosted, Linux, cloud, high-mem]
     steps:
-      - name: checkout
-        uses: actions/checkout@v2
-      - name: toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ env.toolchain }}
-          override: true
-          components: llvm-tools-preview
       - name: ubuntu dependencies
         run: |
           sudo apt-get update && \
@@ -46,28 +37,29 @@ jobs:
             wget \
             libappindicator3-dev \
             patchelf \
-            librsvg2-dev \
-      - name: install grcov
-        run: |
-          cargo install grcov
-      - name: cargo test compile
-        uses: actions-rs/cargo@v1
+            librsvg2-dev
+      - name: checkout
+        uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          components: llvm-tools-preview
+      - uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --no-run --locked --all-features
-      - name: cargo test
-        uses: actions-rs/cargo@v1
+          args: --all-features --no-fail-fast
         env:
-          LLVM_PROFILE_FILE: "coverage_data-%p-%m.profraw"
-          RUSTFLAGS: "-Zinstrument-coverage"
-        with:
-          command: test
-          args: --all-features
-      - name: generate coverage report
+          CARGO_INCREMENTAL: '0'
+          RUSTFLAGS: "-C instrument-coverage"
+          RUSTDOCFLAGS: "-C instrument-coverage"
+      - name: 'Output debug info'
         run: |
-          grcov . -s . --binary-path ./target/debug -t lcov --branch --ignore-not-existing -o ./target/report.lcov
+          du -h -d1 && ls -lah && df -h
+      - id: coverage
+        uses: actions-rs/grcov@v0.1
       - name: Coveralls upload
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ./target/report.lcov
+          path-to-lcov: ${{ steps.coverage.outputs.report }}
