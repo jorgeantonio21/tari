@@ -1,6 +1,5 @@
 output-type: lcov
 binary-path: "./target/debug"
-source: "."
 branch: true
 llvm: true
 ignore-not-existing: true
