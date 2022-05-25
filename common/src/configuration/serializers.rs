@@ -42,6 +42,30 @@ pub mod seconds {
     where S: Serializer {
         s.serialize_u64(duration.as_secs())
     }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+        use serde::{Deserialize, Deserializer, Serialize};
+        use serde_json::{ Result, Value };
+
+        #[derive(Serialize, Deserialize)]
+        struct Test {
+            amount: u64,
+        }
+
+        #[test]
+        fn serialize_test() {
+            let data = r#"
+            {
+                "seconds": 999
+            }"#;
+            let serialize_secs: Value = serde_json::from_str(data).unwrap();
+            let duration = deserialize(serialize_secs).unwrap();
+            println!("seconds are: {}", duration.as_secs());
+            assert_eq!(duration, Duration::from_secs(999));
+        }
+    }
 }
 
 pub mod optional_seconds {
